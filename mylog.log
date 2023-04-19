@@ -1,0 +1,26 @@
+2023-04-19 20:15:21,923 - root - ERROR - The matching radius should be a number (unit: arcsec)
+2023-04-19 20:18:42,761 - root - ERROR - Please provide coordinates and a matching radius.
+2023-04-19 20:24:36,434 - root - ERROR - Please provide coordinates and a matching radius.
+2023-04-19 20:24:53,757 - root - ERROR - Please provide coordinates and a matching radius.
+2023-04-19 20:25:50,637 - root - ERROR - Please provide coordinates and a matching radius.
+2023-04-19 20:36:34,348 - root - ERROR - The matching radius should be a number (unit: arcsec)
+2023-04-19 20:37:51,571 - root - ERROR - Please provide RAs and DECs coordinates either as:
+
+             01 15 22.14 03 14 03.13
+
+             01:15:22.14 03:14:03.13.
+             
+2023-04-19 20:38:39,329 - root - ERROR - Please provide RAs and DECs coordinates either as:
+             01 15 22.14 03 14 03.13 or
+             01:15:22.14 03:14:03.13.
+             
+2023-04-19 20:42:10,784 - root - ERROR - Please provide RAs and DECs coordinates either as:
+                 01 15 22.14 03 14 03.13
+               or
+                 01:15:22.14 03:14:03.13.
+            
+2023-04-19 20:42:23,817 - root - ERROR - The matching radius should be a number (unit: arcsec)
+2023-04-19 20:46:21,603 - root - ERROR - Please provide coordinates and a matching radius.
+2023-04-19 20:52:55,831 - root - ERROR - Please provide coordinates and a matching radius.
+2023-04-19 20:56:21,997 - root - ERROR - Please provide coordinates and a matching radius.
+2023-04-19 20:56:29,435 - root - ERROR - Please provide coordinates and a matching radius.
