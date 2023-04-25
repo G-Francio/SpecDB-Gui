@@ -1,0 +1,9 @@
+database:
+  igmspec : "/media/data/Data/Catalogues/SpecDB/IGMspec_DB_v03.1.hdf5"
+  casbah : "/media/data/Data/Catalogues/SpecDB/CASBaH_specDB_DR1.hdf5"
+  qdb : ""
+  qdb_sdss : "/media/data/Data/Catalogues/SpecDB/QUBRICS_SDSS.hdf5"
+active_db : ""
+qubrics_db : False
+ac_path : "/home/francio/repo/astrocook/ac_gui.py"
+version : 0.1

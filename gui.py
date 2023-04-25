@@ -1,60 +1,125 @@
 import PySimpleGUI as sg
-import sdb
 import utils
+from config import config, load_config
+import sys
+import os
 import log
+import sdb
 
 # Set default font to be bigger
 sg.set_options(font=(sg.DEFAULT_FONT, 13))
 
+# Window to open the database selector
+
+
+def make_db_select_window():
+    layout = [[sg.Text("Select a database. Default loads the path of the default database.")],
+              [sg.Input(key="-FILE-", enable_events=True), sg.FileBrowse()],
+              [sg.Button("Open"), sg.Button("Cancel"), sg.Button("Default")]]
+    return sg.Window('DB selection', layout, finalize=True)
+
+
+# window to handle the search in specdb
+def make_search_window():
+    layout = [
+        [sg.Text("RA (hms)"),  sg.InputText(size=(20, 1), key='-RA_HMS-'),
+            sg.Text("DEC (dms)"), sg.InputText(size=(20, 1), key='-DEC_DMS-')],
+        [sg.Text("RA (deg)"),  sg.InputText(size=(20, 1), key='-RA_DEC-'),
+            sg.Text("DEC (deg)"), sg.InputText(size=(20, 1), key='-DEC_DEG-')],
+        [sg.Text("qid     "),  sg.InputText(size=(20, 1), key='-QID-'),
+            sg.Text("Matching r. ('')"), sg.InputText(size=(5, 1), key='-MATCH_R-')],
+        [sg.B("Search"), sg.B("Open (mpl)"), sg.B("Open (Astrocook)")]
+    ]
+    return sg.Window('Search in DB', layout, finalize=True)
+
 
 def main():
-    # Define the layout of the window
-    layout = [
-        [sg.Text("RA (hms)"), sg.InputText(size=(20, 1)),
-         sg.Text("DEC (dms)"), sg.InputText(size=(20, 1))],
-        [sg.Text("RA (deg)"), sg.InputText(size=(20, 1)),
-         sg.Text("DEC (deg)"), sg.InputText(size=(20, 1))],
-        [sg.Text("qid     "), sg.InputText(size=(20, 1)),
-         sg.Text("Matching r. ('')"), sg.InputText(size=(5, 1))],
-        [sg.Button("Search"), sg.Button("Open (mpl)"),
-         sg.Button("Open (Astrocook)")]
-    ]
+    spectra = [None]
 
     # Create the window
-    window = sg.Window("SpecDB spectral search", layout)
-    spectra = [None]
+    file_window, search_window = make_db_select_window(), None
 
     # Event loop
     while True:
-        event, values = window.read()
-        if event == sg.WIN_CLOSED:
-            break
-        elif event == "Search":
-            try:
-                RA, DEC, tol = utils.parse_input(
-                    values[0], values[1], values[2], values[3], values[5])
-                spectra = sdb.get_spectra(RA, DEC, tol)
-                if spectra[0] is None:
-                    n_spec = 0
-                else:
-                    n_spec = spectra[0].nspec
-                sg.popup(f'Found {n_spec} spectra!')
-            except utils.InvalidInput as e:
-                sg.popup(str(e))
-                log.logger.error(str(e))
+        window, event, values = sg.read_all_windows()
 
-        elif event == "Open (Astrocook)":
-            if spectra[0] is None:
-                print("nothing searched, please search for a spectrum first!")
+        if window == file_window and event in (sg.WINDOW_CLOSED, "Cancel"):
+            break
+
+        if event == "Open":
+            if os.path.isfile(values["-FILE-"]):
+                config["active_db"] = values["-FILE-"]
+                if not search_window:
+                    search_window = make_search_window()
             else:
-                sdb.write_and_open(spectra)
-        elif event == "Open (mpl)":
-            print("TODO! Use astrocook if you can, it's much better anyway!")
-            pass
+                sg.popup("File does not exists, check your path!")
+        elif event == "Default":
+            file_window["-FILE-"].update(config["database"]["igmspec"])
+
+        if search_window:
+            if event in (sg.WIN_CLOSED, 'Exit'):
+                search_window.close()
+                search_window = None
+            elif event == "Search":
+                try:
+                    RA, DEC, tol = utils.parse_input(
+                        values['-RA_HMS-'], values['-DEC_DMS-'],
+                        values['-RA_DEC-'], values['-DEC_DEG-'],
+                        values['-MATCH_R-'])
+                    spectra = sdb.get_spectra(RA, DEC, tol)
+                    if spectra[0] is None:
+                        n_spec = 0
+                    else:
+                        n_spec = spectra[0].nspec
+                    sg.popup(f'Found {n_spec} spectra!')
+                except utils.InvalidInput as e:
+                    sg.popup(str(e))
+                    log.logger.error(str(e))
+            elif event == "Open (Astrocook)":
+                if spectra[0] is None:
+                    sg.popup("Nothing was searched, waiting for a query.")
+                else:
+                    print(1)
+                    sdb.write_and_open(spectra)
+            elif event == "Open (mpl)":
+                print("TODO! Use astrocook if you can, it's much better anyway!")
+                pass
 
     # Close the window
-    window.close()
+    file_window.close()
+    if search_window is not None:
+        search_window.close()
 
 
 if __name__ == '__main__':
+    load_config(sys.argv[1] if len(sys.argv) > 1 else None)
     main()
+
+
+# import PySimpleGUI as sg
+# import matplotlib.pyplot as plt
+
+# """
+#     Simultaneous PySimpleGUI Window AND a Matplotlib Interactive Window
+#     A number of people have requested the ability to run a normal PySimpleGUI window that
+#     launches a MatplotLib window that is interactive with the usual Matplotlib controls.
+#     It turns out to be a rather simple thing to do.  The secret is to add parameter block=False to plt.show()
+# """
+
+# def draw_plot():
+#     plt.plot([0.1, 0.2, 0.5, 0.7])
+#     plt.show(block=False)
+
+# layout = [[sg.Button('Plot'), sg.Cancel(), sg.Button('Popup')]]
+
+# window = sg.Window('Have some Matplotlib....', layout)
+
+# while True:
+#     event, values = window.read()
+#     if event in (sg.WIN_CLOSED, 'Cancel'):
+#         break
+#     elif event == 'Plot':
+#         draw_plot()
+#     elif event == 'Popup':
+#         sg.popup('Yes, your application is still running')
+# window.close()

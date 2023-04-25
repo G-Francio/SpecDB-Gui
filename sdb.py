@@ -7,14 +7,22 @@ from specdb.specdb import SpecDB
 from tempfile import mkdtemp
 from astropy.io import fits
 
-ACGUI_PATH = "/home/francio/repo/astrocook/ac_gui.py"
-sdb = SpecDB(db_file='/media/data/Data/Catalogues/SpecDB/IGMspec_DB_v03.1.hdf5')
+from config import config, load_config
+
+load_config()
+ACGUI_PATH = config["ac_path"]
+
+SDB = None
 
 
-def get_spectra(RA, DEC, sep, sdb=sdb):
+def get_spectra(RA, DEC, sep):
+    global SDB
+    if SDB is None:
+        SDB = SpecDB(db_file=config["active_db"])
+
     if "-" not in DEC and "+" not in DEC:
         DEC = "+" + DEC
-    return sdb.spectra_from_coord(RA + DEC, tol=sep*au.arcsec)
+    return SDB.spectra_from_coord(RA + DEC, tol=sep*au.arcsec)
 
 
 def write_spec(spec, full_path):
