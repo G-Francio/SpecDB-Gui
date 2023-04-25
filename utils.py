@@ -20,7 +20,7 @@ def parse_input(RAs, DECs, RAd, DECd, tol):
         raise InvalidInput("Please provide both RA and DEC")
 
     if _is_number(RAd):
-        _RA, _DEC = RAd, DECd
+        _RA, _DEC = float(RAd), float(DECd)
     else:
         _RA, _DEC = _sub_space_for_color(RAs, DECs)
     return _RA, _DEC, _tol

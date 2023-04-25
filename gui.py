@@ -15,7 +15,8 @@ sg.set_options(font=(sg.DEFAULT_FONT, 13))
 def make_db_select_window():
     layout = [[sg.Text("Select a database. Default loads the path of the default database.")],
               [sg.Input(key="-FILE-", enable_events=True), sg.FileBrowse()],
-              [sg.Button("Open"), sg.Button("Cancel"), sg.Button("Default")]]
+              [sg.Button("Open"), sg.Button("Cancel"), sg.Button("Default"),
+              [sg.Checkbox('Is a QUBRICS formatted database?', default=False, key="is_qubrics_db")]]]
     return sg.Window('DB selection', layout, finalize=True)
 
 
@@ -27,10 +28,34 @@ def make_search_window():
         [sg.Text("RA (deg)"),  sg.InputText(size=(20, 1), key='-RA_DEC-'),
             sg.Text("DEC (deg)"), sg.InputText(size=(20, 1), key='-DEC_DEG-')],
         [sg.Text("qid     "),  sg.InputText(size=(20, 1), key='-QID-'),
-            sg.Text("Matching r. ('')"), sg.InputText(size=(5, 1), key='-MATCH_R-')],
+            sg.Text("Matching r. ('')"), sg.InputText(size=(5, 1), key='-MATCH_R-', default_text="1")],
         [sg.B("Search"), sg.B("Open (mpl)"), sg.B("Open (Astrocook)")]
     ]
     return sg.Window('Search in DB', layout, finalize=True)
+
+
+def _search_specdb(values):
+    RA, DEC, tol = utils.parse_input(
+        values['-RA_HMS-'], values['-DEC_DMS-'],
+        values['-RA_DEC-'], values['-DEC_DEG-'],
+        values['-MATCH_R-'])
+    spectra = sdb.get_spectra(RA, DEC, tol)
+    if spectra[0] is None:
+        n_spec = 0
+    else:
+        n_spec = spectra[0].nspec
+    return spectra, n_spec
+
+
+def _search_qubrics(values):
+    return None, None
+
+
+def search_spectra(values, is_qubrics=False):
+    if is_qubrics:
+        return _search_qubrics(values)
+    else:
+        return _search_specdb(values)
 
 
 def main():
@@ -49,6 +74,7 @@ def main():
         if event == "Open":
             if os.path.isfile(values["-FILE-"]):
                 config["active_db"] = values["-FILE-"]
+                is_qubrics_db = values["is_qubrics_db"]
                 if not search_window:
                     search_window = make_search_window()
             else:
@@ -56,30 +82,22 @@ def main():
         elif event == "Default":
             file_window["-FILE-"].update(config["database"]["igmspec"])
 
-        if search_window:
+        if window == search_window:
             if event in (sg.WIN_CLOSED, 'Exit'):
                 search_window.close()
                 search_window = None
             elif event == "Search":
                 try:
-                    RA, DEC, tol = utils.parse_input(
-                        values['-RA_HMS-'], values['-DEC_DMS-'],
-                        values['-RA_DEC-'], values['-DEC_DEG-'],
-                        values['-MATCH_R-'])
-                    spectra = sdb.get_spectra(RA, DEC, tol)
-                    if spectra[0] is None:
-                        n_spec = 0
-                    else:
-                        n_spec = spectra[0].nspec
+                    spectra, n_spec = search_spectra(
+                        values, is_qubrics=is_qubrics_db)
                     sg.popup(f'Found {n_spec} spectra!')
                 except utils.InvalidInput as e:
                     sg.popup(str(e))
                     log.logger.error(str(e))
             elif event == "Open (Astrocook)":
                 if spectra[0] is None:
-                    sg.popup("Nothing was searched, waiting for a query.")
+                    sg.popup("Nothing to open.")
                 else:
-                    print(1)
                     sdb.write_and_open(spectra)
             elif event == "Open (mpl)":
                 print("TODO! Use astrocook if you can, it's much better anyway!")

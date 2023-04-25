@@ -1,5 +1,6 @@
 import glob
 import subprocess
+import utils
 
 import astropy.units as au
 
@@ -20,9 +21,12 @@ def get_spectra(RA, DEC, sep):
     if SDB is None:
         SDB = SpecDB(db_file=config["active_db"])
 
-    if "-" not in DEC and "+" not in DEC:
-        DEC = "+" + DEC
-    return SDB.spectra_from_coord(RA + DEC, tol=sep*au.arcsec)
+    if utils._is_number(RA):
+        return SDB.spectra_from_coord((RA, DEC), tol=sep*au.arcsec)
+    else:
+        if "-" not in DEC and "+" not in DEC:
+            DEC = "+" + DEC
+        return SDB.spectra_from_coord(RA + DEC, tol=sep*au.arcsec)
 
 
 def write_spec(spec, full_path):
