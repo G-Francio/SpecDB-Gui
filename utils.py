@@ -26,6 +26,13 @@ def parse_input(RAs, DECs, RAd, DECd, tol):
     return _RA, _DEC, _tol
 
 
+def parse_qid(qid):
+    if not _is_number(qid):
+        raise InvalidInput(
+            "Please provide a numeric qid.")
+    return int(qid)
+
+
 def _valid_pairs(pair_1, pair_2):
     if (pair_1[0] != "" and pair_1[1] != "") or (pair_2[0] != "" and pair_2[1] != ""):
         return True

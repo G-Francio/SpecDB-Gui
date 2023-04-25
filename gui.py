@@ -48,11 +48,31 @@ def _search_specdb(values):
 
 
 def _search_qubrics(values):
-    return None, None
+    return None, 0
+
+
+def _search_by_query(query):
+    try:
+        spectra = sdb.query_db(query)
+        if spectra[0] is None:
+            n_spec = 0
+        else:
+            n_spec = spectra[0].nspec
+        return spectra, n_spec
+    except AttributeError:
+        return None, 0
+
+
+def _search_by_qid(values):
+    qid = utils.parse_qid(values["-QID-"])
+    query = {'qid': qid}
+    return _search_by_query(query)
 
 
 def search_spectra(values, is_qubrics=False):
-    if is_qubrics:
+    if values["-QID-"] != "":
+        return _search_by_qid(values)
+    elif is_qubrics:
         return _search_qubrics(values)
     else:
         return _search_specdb(values)

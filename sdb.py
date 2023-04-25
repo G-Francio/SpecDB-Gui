@@ -14,12 +14,15 @@ load_config()
 ACGUI_PATH = config["ac_path"]
 
 SDB = None
+ACTIVE_DB = ""
 
 
 def get_spectra(RA, DEC, sep):
     global SDB
-    if SDB is None:
+    global ACTIVE_DB
+    if SDB is None or ACTIVE_DB != config["active_db"]:
         SDB = SpecDB(db_file=config["active_db"])
+        ACTIVE_DB = config["active_db"]
 
     if utils._is_number(RA):
         return SDB.spectra_from_coord((RA, DEC), tol=sep*au.arcsec)
@@ -27,6 +30,17 @@ def get_spectra(RA, DEC, sep):
         if "-" not in DEC and "+" not in DEC:
             DEC = "+" + DEC
         return SDB.spectra_from_coord(RA + DEC, tol=sep*au.arcsec)
+
+
+def query_db(query):
+    global SDB
+    global ACTIVE_DB
+    if SDB is None or ACTIVE_DB != config["active_db"]:
+        SDB = SpecDB(db_file=config["active_db"])
+        ACTIVE_DB = config["active_db"]
+
+    qmeta = SDB.query_meta(query)
+    return SDB.spectra_from_meta(qmeta, subset=True)
 
 
 def write_spec(spec, full_path):
