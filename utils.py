@@ -1,3 +1,11 @@
+import glob
+import subprocess
+from tempfile import mkdtemp
+from astropy.io import fits
+
+from config import config
+
+
 class InvalidInput(Exception):
     pass
 
@@ -73,3 +81,30 @@ def _valid_RAs_DECs(RA, DEC):
 
 def _sub_space_for_color(RA, DEC):
     return RA.replace(" ", ":"), DEC.replace(" ", ":")
+
+
+def open_ac(path):
+    ac_params = "  ".join(glob.glob(path + "/*.fits"))
+    subprocess.run("python " + config["ac_path"] + "  " + ac_params, shell=True,
+                   capture_output=True, text=True)
+
+
+def write_and_open(spec, path=None, filename="spec"):
+    if path is None:
+        path = mkdtemp() + "/"
+    for (n, _) in enumerate(spec[0]):
+        write_spec(_, full_path=path + filename + "_" + str(n) + ".fits")
+
+    open_ac(path)
+    return 0
+
+
+def write_spec(spec, full_path):
+    wave = fits.Column(name='wave', format='D',
+                       array=spec.data['wave'].reshape(-1, 1) * spec.units['wave'])
+    flux = fits.Column(name='flux', format='D',
+                       array=spec.data['flux'].reshape(-1, 1) * spec.units['flux'])
+    err = fits.Column(name='err', format='D',
+                      array=spec.data['sig'].reshape(-1, 1) * spec.units['flux'])
+    hdu = fits.BinTableHDU.from_columns([wave, flux, err])
+    hdu.writeto(full_path, overwrite=True)

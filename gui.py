@@ -34,8 +34,8 @@ def make_db_select_window():
 # window to handle the search in specdb
 def make_search_window():
     layout = [
-        [sg.Text("RA (hms)"),  sg.InputText(size=(20, 1), key='-RA_HMS-', default_text="00:11:15.23"),
-            sg.Text("DEC (dms)"), sg.InputText(size=(20, 1), key='-DEC_DMS-', default_text="14:46:01.8")],
+        [sg.Text("RA (hms)"),  sg.InputText(size=(20, 1), key='-RA_HMS-'),  # , default_text="00:11:15.23"),
+            sg.Text("DEC (dms)"), sg.InputText(size=(20, 1), key='-DEC_DMS-')],  # , default_text="14:46:01.8")],
         [sg.Text("RA (deg)"),  sg.InputText(size=(20, 1), key='-RA_DEC-'),
             sg.Text("DEC (deg)"), sg.InputText(size=(20, 1), key='-DEC_DEG-')],
         [sg.Text("qid     "),  sg.InputText(size=(20, 1), key='-QID-'),
@@ -43,59 +43,6 @@ def make_search_window():
         [sg.B("Search"), sg.B("Open (mpl)"), sg.B("Open (Astrocook)")]
     ]
     return sg.Window('Search in DB', layout, finalize=True)
-
-
-# Search functions
-def _search_qubrics_by_coord(values, db):
-    return None, 0
-
-
-def _search_specdb_by_coord(values, db):
-    RA, DEC, tol = utils.parse_input(
-        values['-RA_HMS-'], values['-DEC_DMS-'],
-        values['-RA_DEC-'], values['-DEC_DEG-'],
-        values['-MATCH_R-'])
-    spectra = sdb.get_spectra(RA, DEC, tol, db)
-    if spectra[0] is None:
-        n_spec = 0
-    else:
-        n_spec = spectra[0].nspec
-    return spectra, n_spec
-
-
-def _search_qubrics_by_qid(values, db):
-    return sdb.qubrics_spec_by_qid(values["-QID-"], db)
-
-
-def _search_by_query(query, db):
-    # try is needed, in case you search by qid in defautls SpecDB databases
-    #  otherwise it seems like you crash
-    try:
-        spectra = sdb.query_db(query, db)
-        if spectra[0] is None:
-            n_spec = 0
-        else:
-            n_spec = spectra[0].nspec
-        return spectra, n_spec
-    except AttributeError:
-        return None, 0
-
-
-def _search_by_qid(values, db):
-    qid = utils.parse_qid(values["-QID-"])
-    query = {'qid': qid}
-    return _search_by_query(query, db)
-
-
-def search_spectra(values, db, is_qubrics=False):
-    if values["-QID-"] != "" and is_qubrics:
-        return _search_qubrics_by_qid(values, db)
-    elif values["-QID-"] != "" and not is_qubrics:
-        return _search_by_qid(values, db)
-    elif values["-QID-"] == "" and is_qubrics:
-        return _search_qubrics_by_coord(values, db)
-    elif values["-QID-"] == "" and not is_qubrics:
-        return _search_specdb_by_coord(values, db)
 
 
 def load_db(active_db=None, is_qubrics=False):
@@ -147,7 +94,7 @@ def main():
                 search_window = None
             elif event == "Search":
                 try:
-                    spectra, n_spec = search_spectra(
+                    spectra, n_spec = sdb.search_spectra(
                         values, db, is_qubrics=config["qubrics_db"])  # pyright: ignore
                     sg.popup(f'Found {n_spec} spectra!', title="Info")
                 except utils.InvalidInput as e:
@@ -157,7 +104,7 @@ def main():
                 if spectra[0] is None:  # pyright: ignore
                     sg.popup("Nothing to open.", title="Warning")
                 else:
-                    sdb.write_and_open(spectra)
+                    utils.write_and_open(spectra)
             elif event == "Open (mpl)":
                 print("TODO! Use astrocook if you can, it's much better anyway!")
                 pass
@@ -165,7 +112,7 @@ def main():
     # Close the window
     file_window.close()
     if search_window is not None:
-        search_window.close()
+        search_window.close()  # pyright: ignore
     # close open database
     try:
         # SpecDB deals with closin the DB on his own apparently
