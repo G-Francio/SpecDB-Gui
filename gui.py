@@ -16,7 +16,7 @@ def make_db_select_window():
     layout = [[sg.Text("Select a database. Default loads the path of the default database.")],
               [sg.Input(key="-FILE-", enable_events=True), sg.FileBrowse()],
               [sg.Button("Open"), sg.Button("Cancel"), sg.Button("Default"),
-              [sg.Checkbox('Is a QUBRICS formatted database?', default=False, key="is_qubrics_db")]]]
+              [sg.Checkbox('Is a QUBRICS formatted database?', default=config["qubrics_db"], key="is_qubrics_db")]]]
     return sg.Window('DB selection', layout, finalize=True)
 
 
