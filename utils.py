@@ -9,7 +9,7 @@ def parse_input(RAs, DECs, RAd, DECd, tol):
 
     if not _valid_RAs_DECs(RAs, DECs) and RAd == "" and DECd == "":
         raise InvalidInput(
-            "Please provide RAs and DECs coordinates either as (01 15 22.14, 03 14 03.13) or (01:15:22.14, 03:14:03.13).")
+            "Please provide RAs and DECs coordinates as (01 15 22.14, 03 14 03.13) or (01:15:22.14, 03:14:03.13).")
 
     if not _is_number(tol):
         raise InvalidInput(

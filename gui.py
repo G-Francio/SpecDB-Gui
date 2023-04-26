@@ -1,17 +1,28 @@
+from config import config, load_config
+
 import PySimpleGUI as sg
 import utils
-from config import config, load_config
 import sys
 import os
 import log
 import sdb
+import h5py
+
+# check if SpecDB is installed by trying an import
+try:
+    from specdb.specdb import SpecDB
+    config["specdb_installed"] = True
+except ModuleNotFoundError:
+    log.logger.warning(
+        "SpecDB not found! You will only be able to search QUBRICS' formatted databases.")
+    config["specdb_installed"] = False
+
 
 # Set default font to be bigger
 sg.set_options(font=(sg.DEFAULT_FONT, 13))
 
+
 # Window to open the database selector
-
-
 def make_db_select_window():
     layout = [[sg.Text("Select a database. Default loads the path of the default database.")],
               [sg.Input(key="-FILE-", enable_events=True), sg.FileBrowse()],
@@ -23,8 +34,8 @@ def make_db_select_window():
 # window to handle the search in specdb
 def make_search_window():
     layout = [
-        [sg.Text("RA (hms)"),  sg.InputText(size=(20, 1), key='-RA_HMS-'),
-            sg.Text("DEC (dms)"), sg.InputText(size=(20, 1), key='-DEC_DMS-')],
+        [sg.Text("RA (hms)"),  sg.InputText(size=(20, 1), key='-RA_HMS-', default_text="00:11:15.23"),
+            sg.Text("DEC (dms)"), sg.InputText(size=(20, 1), key='-DEC_DMS-', default_text="14:46:01.8")],
         [sg.Text("RA (deg)"),  sg.InputText(size=(20, 1), key='-RA_DEC-'),
             sg.Text("DEC (deg)"), sg.InputText(size=(20, 1), key='-DEC_DEG-')],
         [sg.Text("qid     "),  sg.InputText(size=(20, 1), key='-QID-'),
@@ -34,12 +45,17 @@ def make_search_window():
     return sg.Window('Search in DB', layout, finalize=True)
 
 
-def _search_specdb(values):
+# Search functions
+def _search_qubrics_by_coord(values, db):
+    return None, 0
+
+
+def _search_specdb_by_coord(values, db):
     RA, DEC, tol = utils.parse_input(
         values['-RA_HMS-'], values['-DEC_DMS-'],
         values['-RA_DEC-'], values['-DEC_DEG-'],
         values['-MATCH_R-'])
-    spectra = sdb.get_spectra(RA, DEC, tol)
+    spectra = sdb.get_spectra(RA, DEC, tol, db)
     if spectra[0] is None:
         n_spec = 0
     else:
@@ -47,13 +63,15 @@ def _search_specdb(values):
     return spectra, n_spec
 
 
-def _search_qubrics(values):
-    return None, 0
+def _search_qubrics_by_qid(values, db):
+    return sdb.qubrics_spec_by_qid(values["-QID-"], db)
 
 
-def _search_by_query(query):
+def _search_by_query(query, db):
+    # try is needed, in case you search by qid in defautls SpecDB databases
+    #  otherwise it seems like you crash
     try:
-        spectra = sdb.query_db(query)
+        spectra = sdb.query_db(query, db)
         if spectra[0] is None:
             n_spec = 0
         else:
@@ -63,19 +81,35 @@ def _search_by_query(query):
         return None, 0
 
 
-def _search_by_qid(values):
+def _search_by_qid(values, db):
     qid = utils.parse_qid(values["-QID-"])
     query = {'qid': qid}
-    return _search_by_query(query)
+    return _search_by_query(query, db)
 
 
-def search_spectra(values, is_qubrics=False):
-    if values["-QID-"] != "":
-        return _search_by_qid(values)
-    elif is_qubrics:
-        return _search_qubrics(values)
+def search_spectra(values, db, is_qubrics=False):
+    if values["-QID-"] != "" and is_qubrics:
+        return _search_qubrics_by_qid(values, db)
+    elif values["-QID-"] != "" and not is_qubrics:
+        return _search_by_qid(values, db)
+    elif values["-QID-"] == "" and is_qubrics:
+        return _search_qubrics_by_coord(values, db)
+    elif values["-QID-"] == "" and not is_qubrics:
+        return _search_specdb_by_coord(values, db)
+
+
+def load_db(active_db=None, is_qubrics=False):
+    if not config["specdb_installed"] and not is_qubrics:
+        return False, None
+
+    if is_qubrics:
+        db = h5py.File(config["active_db"], 'r')
+        config["active_db"] = active_db
+        return True, db
     else:
-        return _search_specdb(values)
+        db = SpecDB(db_file=config["active_db"])
+        config["active_db"] = active_db
+        return True, db
 
 
 def main():
@@ -92,31 +126,36 @@ def main():
             break
 
         if event == "Open":
-            if os.path.isfile(values["-FILE-"]):
-                config["active_db"] = values["-FILE-"]
-                is_qubrics_db = values["is_qubrics_db"]
+            if os.path.isfile(values["-FILE-"]) and values["-FILE-"].endswith(".hdf5"):  # pyright: ignore # nopep8
+                config["active_db"] = values["-FILE-"]  # pyright: ignore
+                config["qubrics_db"] = values["is_qubrics_db"]  # pyright: ignore # nopep8
+                ok, db = load_db(config["active_db"], config["qubrics_db"])
                 if not search_window:
-                    search_window = make_search_window()
+                    search_window = make_search_window() if ok else sg.popup(
+                        log.wrong_db_format, title="Error")
+            elif os.path.isfile(values["-FILE-"]) and not values["-FILE-"].endswith(".hdf5"):  # pyright: ignore # nopep8
+                sg.popup("Wrong file type: please load an hdf5 file.",
+                         title="Error")
             else:
-                sg.popup("File does not exists, check your path!")
+                sg.popup("File does not exists, check your path!", title="Error")
         elif event == "Default":
             file_window["-FILE-"].update(config["database"]["igmspec"])
 
         if window == search_window:
             if event in (sg.WIN_CLOSED, 'Exit'):
-                search_window.close()
+                search_window.close()  # pyright: ignore
                 search_window = None
             elif event == "Search":
                 try:
                     spectra, n_spec = search_spectra(
-                        values, is_qubrics=is_qubrics_db)
-                    sg.popup(f'Found {n_spec} spectra!')
+                        values, db, is_qubrics=config["qubrics_db"])  # pyright: ignore
+                    sg.popup(f'Found {n_spec} spectra!', title="Info")
                 except utils.InvalidInput as e:
-                    sg.popup(str(e))
+                    sg.popup(str(e), title="Error")
                     log.logger.error(str(e))
             elif event == "Open (Astrocook)":
-                if spectra[0] is None:
-                    sg.popup("Nothing to open.")
+                if spectra[0] is None:  # pyright: ignore
+                    sg.popup("Nothing to open.", title="Warning")
                 else:
                     sdb.write_and_open(spectra)
             elif event == "Open (mpl)":
@@ -127,37 +166,14 @@ def main():
     file_window.close()
     if search_window is not None:
         search_window.close()
+    # close open database
+    try:
+        # SpecDB deals with closin the DB on his own apparently
+        db.close()  # pyright: ignore
+    except (AttributeError, UnboundLocalError):
+        log.logger.warning("Nothing to close.")
 
 
 if __name__ == '__main__':
     load_config(sys.argv[1] if len(sys.argv) > 1 else None)
     main()
-
-
-# import PySimpleGUI as sg
-# import matplotlib.pyplot as plt
-
-# """
-#     Simultaneous PySimpleGUI Window AND a Matplotlib Interactive Window
-#     A number of people have requested the ability to run a normal PySimpleGUI window that
-#     launches a MatplotLib window that is interactive with the usual Matplotlib controls.
-#     It turns out to be a rather simple thing to do.  The secret is to add parameter block=False to plt.show()
-# """
-
-# def draw_plot():
-#     plt.plot([0.1, 0.2, 0.5, 0.7])
-#     plt.show(block=False)
-
-# layout = [[sg.Button('Plot'), sg.Cancel(), sg.Button('Popup')]]
-
-# window = sg.Window('Have some Matplotlib....', layout)
-
-# while True:
-#     event, values = window.read()
-#     if event in (sg.WIN_CLOSED, 'Cancel'):
-#         break
-#     elif event == 'Plot':
-#         draw_plot()
-#     elif event == 'Popup':
-#         sg.popup('Yes, your application is still running')
-# window.close()

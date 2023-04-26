@@ -4,43 +4,49 @@ import utils
 
 import astropy.units as au
 
-from specdb.specdb import SpecDB
 from tempfile import mkdtemp
 from astropy.io import fits
 
-from config import config, load_config
-
-load_config()
-ACGUI_PATH = config["ac_path"]
-
-SDB = None
-ACTIVE_DB = ""
+from config import config
 
 
-def get_spectra(RA, DEC, sep):
-    global SDB
-    global ACTIVE_DB
-    if SDB is None or ACTIVE_DB != config["active_db"]:
-        SDB = SpecDB(db_file=config["active_db"])
-        ACTIVE_DB = config["active_db"]
+class _SimpleSpec():
+    def __init__(self):
+        self.data = {}
+        self.units = {}
 
+
+def qubrics_spec_by_qid(qid, db):
+    spec_list = []
+    try:
+        for group in db[qid]:
+            # from _ you can get wave, flux, err
+            _ = _SimpleSpec()
+            _.data['wave'] = db[qid][group][:]['wave']
+            _.data['flux'] = db[qid][group][:]['flux']
+            _.data['sig'] = db[qid][group][:]['error']
+            _.units['wave'] = au.AA
+            _.units['flux'] = au.dimensionless_unscaled
+            _.units['sig'] = au.dimensionless_unscaled
+            spec_list.append(_)
+
+        return [spec_list], len(spec_list)
+    except KeyError:
+        return [None], 0
+
+
+def get_spectra(RA, DEC, sep, db):
     if utils._is_number(RA):
-        return SDB.spectra_from_coord((RA, DEC), tol=sep*au.arcsec)
+        return db.spectra_from_coord((RA, DEC), tol=sep*au.arcsec)
     else:
         if "-" not in DEC and "+" not in DEC:
             DEC = "+" + DEC
-        return SDB.spectra_from_coord(RA + DEC, tol=sep*au.arcsec)
+        return db.spectra_from_coord(RA + DEC, tol=sep*au.arcsec)
 
 
-def query_db(query):
-    global SDB
-    global ACTIVE_DB
-    if SDB is None or ACTIVE_DB != config["active_db"]:
-        SDB = SpecDB(db_file=config["active_db"])
-        ACTIVE_DB = config["active_db"]
-
-    qmeta = SDB.query_meta(query)
-    return SDB.spectra_from_meta(qmeta, subset=True)
+def query_db(query, db):
+    qmeta = db.query_meta(query)
+    return db.spectra_from_meta(qmeta, subset=True)
 
 
 def write_spec(spec, full_path):
@@ -56,11 +62,13 @@ def write_spec(spec, full_path):
 
 def open_ac(path):
     ac_params = "  ".join(glob.glob(path + "/*.fits"))
-    subprocess.run("python " + ACGUI_PATH + "  " + ac_params, shell=True,
+    subprocess.run("python " + config["ac_path"] + "  " + ac_params, shell=True,
                    capture_output=True, text=True)
 
 
-def write_and_open(spec, path=mkdtemp() + "/", filename="spec"):
+def write_and_open(spec, path=None, filename="spec"):
+    if path is None:
+        path = mkdtemp() + "/"
     for (n, _) in enumerate(spec[0]):
         write_spec(_, full_path=path + filename + "_" + str(n) + ".fits")
 
