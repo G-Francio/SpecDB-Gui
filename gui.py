@@ -73,14 +73,14 @@ def main():
             break
 
         if event == "Open":
-            if os.path.isfile(values["-FILE-"]) and values["-FILE-"].endswith(".hdf5"):  # pyright: ignore # nopep8
-                config["active_db"] = values["-FILE-"]  # pyright: ignore
-                config["qubrics_db"] = values["is_qubrics_db"]  # pyright: ignore # nopep8
+            if os.path.isfile(values["-FILE-"]) and values["-FILE-"].endswith(".hdf5"):
+                config["active_db"] = values["-FILE-"]
+                config["qubrics_db"] = values["is_qubrics_db"]
                 ok, db = load_db(config["active_db"], config["qubrics_db"])
                 if not search_window:
                     search_window = make_search_window() if ok else sg.popup(
                         log.wrong_db_format, title="Error")
-            elif os.path.isfile(values["-FILE-"]) and not values["-FILE-"].endswith(".hdf5"):  # pyright: ignore # nopep8
+            elif os.path.isfile(values["-FILE-"]) and not values["-FILE-"].endswith(".hdf5"):
                 sg.popup("Wrong file type: please load an hdf5 file.",
                          title="Error")
             else:
@@ -90,18 +90,18 @@ def main():
 
         if window == search_window:
             if event in (sg.WIN_CLOSED, 'Exit'):
-                search_window.close()  # pyright: ignore
+                search_window.close()
                 search_window = None
             elif event == "Search":
                 try:
                     spectra, n_spec = sdb.search_spectra(
-                        values, db, is_qubrics=config["qubrics_db"])  # pyright: ignore
+                        values, db, is_qubrics=config["qubrics_db"])
                     sg.popup(f'Found {n_spec} spectra!', title="Info")
                 except utils.InvalidInput as e:
                     sg.popup(str(e), title="Error")
                     log.logger.error(str(e))
             elif event == "Open (Astrocook)":
-                if spectra[0] is None:  # pyright: ignore
+                if spectra[0] is None:
                     sg.popup("Nothing to open.", title="Warning")
                 else:
                     utils.write_and_open(spectra)
@@ -112,11 +112,11 @@ def main():
     # Close the window
     file_window.close()
     if search_window is not None:
-        search_window.close()  # pyright: ignore
+        search_window.close()
     # close open database
     try:
         # SpecDB deals with closin the DB on his own apparently
-        db.close()  # pyright: ignore
+        db.close()
     except (AttributeError, UnboundLocalError):
         log.logger.warning("Nothing to close.")
 
