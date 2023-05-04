@@ -6,7 +6,6 @@ import sys
 import os
 import log
 import sdb
-import h5py
 
 # check if SpecDB is installed by trying an import
 try:
@@ -50,9 +49,8 @@ def load_db(active_db=None, is_qubrics=False):
         return False, None
 
     if is_qubrics:
-        db = h5py.File(config["active_db"], 'r')
         config["active_db"] = active_db
-        return True, db
+        return True, None
     else:
         db = SpecDB(db_file=config["active_db"])
         config["active_db"] = active_db
@@ -95,7 +93,7 @@ def main():
             elif event == "Search":
                 try:
                     spectra, n_spec = sdb.search_spectra(
-                        values, db, is_qubrics=config["qubrics_db"])
+                        values, db, is_qubrics=config["qubrics_db"], config=config)
                     sg.popup(f'Found {n_spec} spectra!', title="Info")
                 except utils.InvalidInput as e:
                     sg.popup(str(e), title="Error")
