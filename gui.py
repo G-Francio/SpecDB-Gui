@@ -84,7 +84,7 @@ def main():
             else:
                 sg.popup("File does not exists, check your path!", title="Error")
         elif event == "Default":
-            file_window["-FILE-"].update(config["database"]["igmspec"])
+            file_window["-FILE-"].update(config["database"]["default"])
 
         if window == search_window:
             if event in (sg.WIN_CLOSED, 'Exit'):

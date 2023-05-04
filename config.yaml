@@ -1,4 +1,5 @@
 database:
+  default: "/media/data/Data/Catalogues/SpecDB/IGMspec_DB_v03.1.hdf5"
   igmspec : "/media/data/Data/Catalogues/SpecDB/IGMspec_DB_v03.1.hdf5"
   casbah : "/media/data/Data/Catalogues/SpecDB/CASBaH_specDB_DR1.hdf5"
   qdb : ""

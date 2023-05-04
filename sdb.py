@@ -119,8 +119,8 @@ def _search_qubrics_by_coord(values, db, config):
         spec_list = []
         for i in file_indices:
             qid = (meta.T[i][0]).astype("str")
-            spec_list = spec_list + _qubrics_spec_by_qid(qid, db)[0]
-        return spec_list, len(spec_list)
+            spec_list = spec_list + _qubrics_spec_by_qid(qid, db)[0][0]
+        return [spec_list], len(spec_list)
     else:
         return [None], 0
 
