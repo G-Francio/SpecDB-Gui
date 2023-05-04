@@ -188,8 +188,7 @@ def open_ac(path):
     Returns:
         None.
     """
-    ac_params = "  ".join(glob.glob(path + "/*.fits"))
-    subprocess.run("python " + config["ac_path"] + "  " + ac_params, shell=True,
+    subprocess.run(["python", config["ac_path"], *glob.glob(path + "/*.fits")],
                    capture_output=True, text=True)
 
 
